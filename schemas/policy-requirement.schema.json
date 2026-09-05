@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/policy-requirement.schema.json",
+  "title": "PolicyRequirement",
+  "description": "One independently testable commitment extracted from a policy, SOP, T&C or regulatory document, with mandatory source evidence and an explicit source/proposal boundary.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "requirement_id",
+    "policy_name",
+    "source_document_id",
+    "source_file",
+    "source_page_start",
+    "source_page_end",
+    "source_section",
+    "source_quote",
+    "requirement_type",
+    "normative_strength",
+    "what",
+    "why_basis",
+    "accountable_role",
+    "responsible_role",
+    "trigger",
+    "frequency",
+    "deadline_basis",
+    "process_steps",
+    "mandatory_evidence",
+    "exceptions_conditions",
+    "cited_regulations",
+    "cross_policy_references",
+    "evidence_class",
+    "extraction_confidence",
+    "review_status",
+    "status"
+  ],
+  "properties": {
+    "requirement_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{2,12}-R-[0-9]{3,5}$",
+      "description": "Stable ID, e.g. GRV-R-001. Never reused or renumbered once published."
+    },
+    "policy_name": { "type": "string", "minLength": 1 },
+    "policy_version": { "type": ["string", "null"] },
+    "policy_approval_or_effective_date": {
+      "type": ["string", "null"],
+      "description": "As printed in the document. 'not_specified' if absent; never inferred from file dates."
+    },
+    "source_document_id": { "type": "string", "pattern": "^SRC-[0-9]{4}$" },
+    "source_file": { "type": "string", "minLength": 1 },
+    "source_page_start": { "type": "integer", "minimum": 1 },
+    "source_page_end": { "type": "integer", "minimum": 1 },
+    "source_section": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Heading or clause reference as printed. 'not_specified' only when the document genuinely has no heading for the passage."
+    },
+    "source_quote": {
+      "type": "string",
+      "minLength": 15,
+      "description": "Verbatim sentence(s) supporting this requirement. Must be findable on the cited page after whitespace normalisation."
+    },
+    "printed_page_label": {
+      "type": ["string", "null"],
+      "description": "The page number printed on the page, when it differs from the physical PDF page."
+    },
+    "source_table_id": {
+      "type": ["string", "null"],
+      "description": "Table ID from tables.json when this requirement derives from a table row or cell."
+    },
+    "requirement_type": {
+      "type": "string",
+      "enum": [
+        "policy_obligation", "process_step", "customer_obligation",
+        "approval_requirement", "monitoring_requirement", "reporting_requirement",
+        "record_retention_requirement", "disclosure_requirement", "prohibition",
+        "exception", "definition", "regulatory_reference"
+      ]
+    },
+    "normative_strength": {
+      "type": "string",
+      "enum": ["must", "shall", "will", "should", "may", "must_not", "shall_not", "not_specified"]
+    },
+    "obligation_bearer": {
+      "type": "string",
+      "enum": ["organisation", "customer", "third_party", "regulator", "both", "not_specified"]
+    },
+    "what": { "type": "string", "minLength": 10 },
+    "why": { "type": ["string", "null"] },
+    "why_basis": {
+      "type": "string",
+      "enum": ["explicit_source", "operational_inference", "not_specified"]
+    },
+    "accountable_role": { "type": "string", "minLength": 1 },
+    "responsible_role": { "type": "string", "minLength": 1 },
+    "consulted_roles": { "type": "array", "items": { "type": "string" } },
+    "assurance_roles": { "type": "array", "items": { "type": "string" } },
+    "role_basis": {
+      "type": "string",
+      "enum": ["explicit_source", "operational_inference", "not_specified"],
+      "default": "not_specified"
+    },
+    "applicability": { "type": ["string", "null"] },
+    "trigger": { "type": "string", "minLength": 1 },
+    "frequency": { "type": "string", "minLength": 1 },
+    "deadline_value": { "type": ["number", "null"] },
+    "deadline_unit": {
+      "type": ["string", "null"],
+      "enum": ["minute", "hour", "day", "week", "month", "quarter", "half_year", "year", null]
+    },
+    "deadline_basis": {
+      "type": "string",
+      "enum": ["calendar_day", "working_day", "business_day", "immediate", "not_specified"]
+    },
+    "deadline_verbatim": {
+      "type": ["string", "null"],
+      "description": "The timing expression exactly as printed, e.g. 'within 30 working days of receipt'."
+    },
+    "process_steps": { "type": "array", "items": { "type": "string" } },
+    "mandatory_evidence": { "type": "array", "items": { "type": "string" } },
+    "exceptions_conditions": { "type": "array", "items": { "type": "string" } },
+    "cited_regulations": { "type": "array", "items": { "type": "string" } },
+    "cross_policy_references": { "type": "array", "items": { "type": "string" } },
+    "numeric_facts": {
+      "type": "array",
+      "description": "Every money value, percentage, count, duration or threshold this requirement asserts. Each must be traceable to the quote or the cited page.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "verbatim"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["money", "percentage", "duration", "count", "threshold", "rate", "other"]
+          },
+          "verbatim": { "type": "string", "minLength": 1 },
+          "value": { "type": ["number", "null"] },
+          "unit": { "type": ["string", "null"] },
+          "currency": { "type": ["string", "null"] },
+          "context": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "evidence_class": {
+      "type": "string",
+      "enum": ["SOURCE-EXPLICIT", "SOURCE-INFERRED", "REQUIRES-LEGAL-REVIEW"],
+      "description": "Class of the requirement itself. Proposed controls/evidence/tests carry their own labels inside the controls object."
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["control_id", "label", "objective", "control_type", "frequency", "performer"],
+        "properties": {
+          "control_id": { "type": "string", "pattern": "^CTRL-[A-Z0-9]{2,12}-[0-9]{3,4}$" },
+          "label": { "type": "string", "enum": ["SOURCE-EXPLICIT", "PROPOSED-CONTROL"] },
+          "objective": { "type": "string", "minLength": 10 },
+          "control_type": {
+            "type": "string",
+            "enum": ["preventive", "detective", "preventive_and_detective", "corrective", "directive"]
+          },
+          "automation": { "type": ["string", "null"], "enum": ["manual", "it_dependent_manual", "automated", "not_specified", null] },
+          "frequency": { "type": "string", "minLength": 1 },
+          "performer": { "type": "string", "minLength": 1 },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["artefact", "label"],
+              "properties": {
+                "artefact": { "type": "string", "minLength": 1 },
+                "label": { "type": "string", "enum": ["SOURCE-EXPLICIT", "PROPOSED-EVIDENCE"] },
+                "system_of_record": { "type": ["string", "null"] },
+                "retention": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "test_procedure": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["step", "label"],
+              "properties": {
+                "step": { "type": "string", "minLength": 5 },
+                "label": { "type": "string", "enum": ["SOURCE-EXPLICIT", "PROPOSED-TEST"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "visual_reconciliation": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Required (G7) whenever source_table_id is set or numeric_facts contains money/percentage/duration/threshold values drawn from a table.",
+      "required": ["page_image", "checked"],
+      "properties": {
+        "page_image": { "type": "string", "minLength": 1 },
+        "checked": { "type": "boolean" },
+        "checked_by": { "type": ["string", "null"] },
+        "checked_on": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "candidate_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Candidate-clause IDs this requirement discharges. Drives the Stage 2 coverage test."
+    },
+    "extraction_confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+    "review_status": {
+      "type": "string",
+      "enum": ["unreviewed", "validated", "amended", "rejected", "requires_policy_owner", "requires_legal_review"]
+    },
+    "reviewer_notes": { "type": ["string", "null"] },
+    "open_questions": { "type": "array", "items": { "type": "string" } },
+    "review_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "G8. Each applicable gate must be signed by a named human before status may become 'approved'.",
+      "properties": {
+        "source_fidelity": { "$ref": "#/$defs/gate" },
+        "policy_meaning": { "$ref": "#/$defs/gate" },
+        "regulatory_mapping": { "$ref": "#/$defs/gate" },
+        "operational_feasibility": { "$ref": "#/$defs/gate" },
+        "assurance_design": { "$ref": "#/$defs/gate" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "in_review", "approved"],
+      "description": "'approved' is refused by the validator unless every applicable review gate is signed."
+    }
+  },
+  "$defs": {
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": { "type": "string", "enum": ["open", "not_applicable", "signed"] },
+        "reviewer": { "type": ["string", "null"] },
+        "signed_on": { "type": ["string", "null"] },
+        "decision": { "type": ["string", "null"], "enum": ["accepted", "amended", "rejected", null] },
+        "notes": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
