@@ -36,3 +36,12 @@ try:
     from assert_live_version import assert_live
 except Exception:  # pragma: no cover
     assert_live = None  # type: ignore
+
+# --- pattern families -------------------------------------------------------
+
+BINDING = re.compile(
+    r"\b(shall not|shall|must not|must|will not|will|required to|is obliged|obligated to|"
+    r"has to|have to|need to|needs to|responsible for|accountable for|ensure that|ensures|ensure|"
+    r"prohibited|not permitted|shall be entitled|is entitled|may not|no .{0,20}shall)\b",
+    re.I,
+)
