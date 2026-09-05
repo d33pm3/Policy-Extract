@@ -140,3 +140,129 @@ def nearest_heading(md_lines: list[str], idx: int) -> str:
         if PAGE_MARK.match(line) and j < idx - 200:
             break
     return "not_specified"
+
+
+def build_page_headings(doc_dir: Path) -> dict[int, list[tuple[int, str]]]:
+    """Map page -> [(line_index, heading)] from the page-marked Markdown."""
+    md = (doc_dir / "document.md")
+    if not md.exists():
+        return {}
+    lines = md.read_text(encoding="utf-8").splitlines()
+    result: dict[int, list[tuple[int, str]]] = {}
+    cur_page = None
+    for i, line in enumerate(lines):
+        m = PAGE_MARK.match(line.strip())
+        if m:
+            cur_page = int(m.group(2))
+            result.setdefault(cur_page, [])
+        elif line.strip().startswith("### ") and cur_page is not None:
+            result.setdefault(cur_page, []).append((i, line.strip()[4:].strip()))
+    return result
+
+
+def heading_for_offset(headings: list[tuple[int, str]], approx_rank: int) -> str:
+    if not headings:
+        return "not_specified"
+    chosen = headings[0][1]
+    for rank, (_, h) in enumerate(headings):
+        if rank <= approx_rank:
+            chosen = h
+    return chosen
+
+
+def numeric_hits(text: str) -> list[dict]:
+    hits = []
+    for kind, pat in (("money", MONEY), ("percentage", PERCENT), ("duration", DURATION), ("threshold", THRESHOLD)):
+        for m in pat.finditer(text):
+            hits.append({"kind": kind, "verbatim": m.group(0).strip()})
+    seen, out = set(), []
+    for h in hits:
+        key = (h["kind"], h["verbatim"].lower())
+        if key not in seen:
+            seen.add(key)
+            out.append(h)
+    return out
+
+
+def classify(text: str) -> dict:
+    nums = numeric_hits(text)
+    verbs = [m.group(0).lower() for m in ACTION_VERBS.finditer(text)]
+    flags = {
+        "binding": bool(BINDING.search(text)),
+        "timing": bool(TIMING.search(text)),
+        "governance": bool(GOVERNANCE.search(text)),
+        "conditional": bool(CONDITIONAL.search(text)),
+        "definition": bool(DEFINITION.search(text)),
+        "numeric": bool(nums),
+        "contact": bool(CONTACT.search(text)),
+        "forum": bool(FORUM.search(text)),
+        "multi_verb": len(set(verbs)) >= 2,
+    }
+    priority = next(p for p, fn in PRIORITY_RULES if fn(flags))
+    if flags["contact"] or flags["forum"] or flags["multi_verb"]:
+        if priority in ("low", "medium"):
+            priority = "high"
+    ctype = next(t for t, fn in TYPE_RULES if fn(flags))
+    terms = []
+    for pat in (BINDING, TIMING, GOVERNANCE, CONDITIONAL, CONTACT, FORUM):
+        terms += [m.group(0).strip().lower() for m in pat.finditer(text)]
+    terms += verbs
+    return {"flags": flags, "priority": priority, "candidate_type": ctype,
+            "trigger_terms": sorted(set(terms))[:16], "numeric_facts": nums,
+            "citations": sorted({m.group(0).strip() for m in CITATION.finditer(text)})[:8],
+            "action_verbs": sorted(set(verbs))}
+
+
+def split_units(text: str) -> list[str]:
+    """Sentence units plus list bullets. Short fragments are dropped later."""
+    chunks: list[str] = []
+    parts = BULLET_SPLIT.split(text) if BULLET_SPLIT.search("\n" + text) else [text]
+    for part in parts:
+        for sent in SENT_SPLIT.split(part):
+            s = re.sub(r"\s+", " ", sent).strip()
+            if s:
+                chunks.append(s)
+    return chunks
+
+
+def strip_leading_page_token(text: str) -> str:
+    lines = text.splitlines()
+    if lines and PAGE_NUM_TOKEN.match(lines[0].strip()):
+        return "\n".join(lines[1:])
+    return text
+
+
+def stitch_page_units(pages: dict[int, str]) -> list[dict]:
+    """Emit page-local units and a joined unit when a sentence crosses a page break."""
+    units: list[dict] = []
+    ordered = sorted(pages)
+    raw = {p: strip_leading_page_token(pages[p] or "") for p in ordered}
+    for pno in ordered:
+        for sent in split_units(raw[pno]):
+            units.append({"page_start": pno, "page_end": pno, "text": sent,
+                          "origin": "sentence"})
+    for i, pno in enumerate(ordered[:-1]):
+        nxt = ordered[i + 1]
+        left = raw[pno].rstrip()
+        right = raw[nxt].lstrip()
+        if not left or not right:
+            continue
+        if left[-1] in ".?!":
+            continue
+        right_body = strip_leading_page_token(right).lstrip()
+        if not right_body:
+            continue
+        first = split_units(right_body)
+        if not first:
+            continue
+        continuation = first[0]
+        if continuation[:1].isupper() and not left.endswith((",", ";", ":", "and", "or", "in", "the", "to")):
+            if len(left) < 40:
+                continue
+        joined = (left + " " + continuation).strip()
+        joined = re.sub(r"\s+", " ", joined)
+        if len(joined) < 40:
+            continue
+        units.append({"page_start": pno, "page_end": nxt, "text": joined,
+                      "origin": "page_span_sentence"})
+    return units
