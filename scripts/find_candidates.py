@@ -266,3 +266,148 @@ def stitch_page_units(pages: dict[int, str]) -> list[dict]:
         units.append({"page_start": pno, "page_end": nxt, "text": joined,
                       "origin": "page_span_sentence"})
     return units
+
+
+def scan_document(kb: Path, doc: dict) -> dict:
+    doc_dir = kb / "01-source-layer" / doc["document_id"]
+    pages_file = doc_dir / "pages.json"
+    if not pages_file.exists():
+        raise SystemExit(f"ERROR: {pages_file} missing. Run Stage 1 for {doc['document_id']}.")
+    pages = {int(k): v for k, v in json.loads(pages_file.read_text(encoding="utf-8")).items()}
+    tables = json.loads((doc_dir / "tables.json").read_text(encoding="utf-8")) if (doc_dir / "tables.json").exists() else []
+    page_headings = build_page_headings(doc_dir)
+
+    code = doc["short_code"]
+    candidates, seq = [], 0
+
+    seen_text = set()
+    page_units = stitch_page_units(pages)
+    for rank, unit in enumerate(page_units):
+        sent = unit["text"]
+        if len(sent) < 25:
+            continue
+        key = (unit["page_start"], unit["page_end"], squash_key(sent))
+        if key in seen_text:
+            continue
+        seen_text.add(key)
+        info = classify(sent)
+        f = info["flags"]
+        if not (f["binding"] or f["timing"] or f["governance"] or f["conditional"]
+                or f["numeric"] or f["definition"] or f["contact"] or f["forum"]
+                or f["multi_verb"]):
+            continue
+        heads = page_headings.get(unit["page_start"], [])
+        seq += 1
+        candidates.append({
+            "candidate_id": f"{code}-CAN-{seq:05d}",
+            "source_document_id": doc["document_id"],
+            "source_file": doc["file_name"],
+            "source_page": unit["page_start"],
+            "source_page_end": unit["page_end"],
+            "source_section": heading_for_offset(heads, rank),
+            "origin": unit["origin"],
+            "source_table_id": None,
+            "exact_text": sent,
+            "trigger_terms": info["trigger_terms"],
+            "numeric_facts": info["numeric_facts"],
+            "cited_regulations": info["citations"],
+            "candidate_type": info["candidate_type"],
+            "extraction_priority": info["priority"],
+            "action_verbs": info.get("action_verbs") or [],
+            "disposition": "pending",
+            "mapped_requirement_ids": [],
+            "disposition_reason": None,
+        })
+
+    for tbl in tables:
+        header = " | ".join(tbl.get("header") or [])
+        for r_i, row in enumerate(tbl.get("rows") or [], start=1):
+            joined = " | ".join(c for c in row if c)
+            if not joined.strip():
+                continue
+            info = classify(joined)
+            f = info["flags"]
+            if not (f["numeric"] or f["binding"] or f["timing"] or f["conditional"]):
+                continue
+            seq += 1
+            candidates.append({
+                "candidate_id": f"{code}-CAN-{seq:05d}",
+                "source_document_id": doc["document_id"],
+                "source_file": doc["file_name"],
+                "source_page": tbl["page"],
+                "source_section": f"Table {tbl['table_id']}" + (f" [{header}]" if header else ""),
+                "origin": "table_cell",
+                "source_table_id": tbl["table_id"],
+                "exact_text": joined,
+                "trigger_terms": info["trigger_terms"],
+                "numeric_facts": info["numeric_facts"],
+                "cited_regulations": info["citations"],
+                "candidate_type": "monetary_or_threshold" if f["numeric"] else info["candidate_type"],
+                "extraction_priority": "critical" if f["numeric"] else info["priority"],
+                "disposition": "pending",
+                "mapped_requirement_ids": [],
+                "disposition_reason": None,
+                "requires_visual_reconciliation": True,
+                "row_index": r_i,
+            })
+
+    return {
+        "source_document_id": doc["document_id"],
+        "short_code": code,
+        "source_file": doc["file_name"],
+        "page_count": doc["page_count"],
+        "candidate_count": len(candidates),
+        "by_priority": {p: sum(1 for c in candidates if c["extraction_priority"] == p)
+                        for p in ("critical", "high", "medium", "low")},
+        "table_cell_candidates": sum(1 for c in candidates if c["origin"] == "table_cell"),
+        "candidates": candidates,
+    }
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Stage 2 candidate clause ledger")
+    ap.add_argument("--kb", required=True)
+    ap.add_argument("--doc-id", default="ALL")
+    args = ap.parse_args()
+
+    if assert_live is not None:
+        assert_live()
+    kb = Path(args.kb)
+    register = load_register(kb)
+    targets = register if args.doc_id.upper() == "ALL" else [d for d in register if d["document_id"] == args.doc_id]
+    if not targets:
+        print(f"ERROR: no document matched {args.doc_id}", file=sys.stderr)
+        return 1
+
+    out_dir = kb / "02-candidates"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    total = 0
+    summary = []
+    for doc in targets:
+        ledger = scan_document(kb, doc)
+        (out_dir / f"{doc['document_id']}-candidates.json").write_text(
+            json.dumps(ledger, indent=2), encoding="utf-8")
+        total += ledger["candidate_count"]
+        summary.append(ledger)
+        print(f"  {doc['document_id']} {doc['short_code']:<8} "
+              f"{ledger['candidate_count']:4d} candidates "
+              f"(critical {ledger['by_priority']['critical']}, "
+              f"table cells {ledger['table_cell_candidates']}) - {doc['file_name']}")
+
+    lines = ["# Stage 2 candidate ledger summary", "",
+             "| Doc | Code | Pages | Candidates | Critical | High | Table cells |",
+             "|---|---|---:|---:|---:|---:|---:|"]
+    for s in summary:
+        lines.append(f"| {s['source_document_id']} | {s['short_code']} | {s['page_count']} | "
+                     f"{s['candidate_count']} | {s['by_priority']['critical']} | "
+                     f"{s['by_priority']['high']} | {s['table_cell_candidates']} |")
+    lines += ["", f"**Total candidates: {total}.** Every one needs a disposition "
+                  "(`mapped`, `non_binding` or `queued_for_review`) before Stage 6 can pass."]
+    (kb / "05-quality-assurance" / "source-coverage-report.md").parent.mkdir(parents=True, exist_ok=True)
+    (kb / "05-quality-assurance" / "source-coverage-report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"\nTotal candidates: {total}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
