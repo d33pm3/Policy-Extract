@@ -1,0 +1,83 @@
+{
+  "requirement_id": "XXX-R-001",
+  "policy_name": "",
+  "policy_version": null,
+  "policy_approval_or_effective_date": "not_specified",
+
+  "source_document_id": "SRC-0001",
+  "source_file": "",
+  "source_page_start": 1,
+  "source_page_end": 1,
+  "source_section": "",
+  "source_quote": "",
+  "printed_page_label": null,
+  "source_table_id": null,
+
+  "requirement_type": "policy_obligation",
+  "normative_strength": "shall",
+  "obligation_bearer": "organisation",
+
+  "what": "",
+  "why": null,
+  "why_basis": "not_specified",
+
+  "accountable_role": "not_specified",
+  "responsible_role": "not_specified",
+  "consulted_roles": [],
+  "assurance_roles": [],
+  "role_basis": "not_specified",
+
+  "applicability": null,
+  "trigger": "not_specified",
+  "frequency": "not_specified",
+  "deadline_value": null,
+  "deadline_unit": null,
+  "deadline_basis": "not_specified",
+  "deadline_verbatim": null,
+
+  "process_steps": [],
+  "mandatory_evidence": [],
+  "exceptions_conditions": [],
+  "cited_regulations": [],
+  "cross_policy_references": [],
+
+  "numeric_facts": [],
+
+  "evidence_class": "SOURCE-EXPLICIT",
+
+  "controls": [
+    {
+      "control_id": "CTRL-XXX-001",
+      "label": "PROPOSED-CONTROL",
+      "objective": "",
+      "control_type": "detective",
+      "automation": "not_specified",
+      "frequency": "not_specified",
+      "performer": "not_specified",
+      "evidence": [
+        { "artefact": "", "label": "PROPOSED-EVIDENCE", "system_of_record": null, "retention": null }
+      ],
+      "test_procedure": [
+        { "step": "", "label": "PROPOSED-TEST" }
+      ]
+    }
+  ],
+
+  "visual_reconciliation": null,
+
+  "candidate_ids": [],
+
+  "extraction_confidence": "medium",
+  "review_status": "unreviewed",
+  "reviewer_notes": null,
+  "open_questions": [],
+
+  "review_gates": {
+    "source_fidelity": { "state": "open" },
+    "policy_meaning": { "state": "open" },
+    "operational_feasibility": { "state": "open" },
+    "assurance_design": { "state": "open" }
+  },
+
+  "status": "draft"
+}
