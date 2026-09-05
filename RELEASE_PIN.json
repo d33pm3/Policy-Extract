@@ -1,0 +1,22 @@
+{
+  "name": "policy-extractor",
+  "version": "1.2.0",
+  "canonical_path": ".",
+  "canonical_source": "https://github.com/d33pm3/Policy-Extract",
+  "min_version": "1.2.0",
+  "gold_packs_forbidden": [
+    "historical-client-compliance-pack.md"
+  ],
+  "required_files": [
+    "SKILL.md",
+    "VERSION",
+    "RELEASE_PIN.json",
+    "references/atomicity-and-recall.md",
+    "prompts/extraction.md",
+    "scripts/stage3_preflight.py",
+    "scripts/assert_live_version.py",
+    "scripts/find_candidates.py",
+    "scripts/validate_pack.py",
+    "scripts/build_packs.py"
+  ]
+}

@@ -1,0 +1,20 @@
+[project]
+name = "policy-extractor"
+version = "1.2.0"
+description = "Evidence-linked policy and SOP compliance extraction pipeline."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+dependencies = [
+  "pdfplumber>=0.11.0",
+  "pypdf>=4.0.0",
+  "jsonschema>=4.20.0",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[tool.pytest.ini_options]
+testpaths = ["scripts"]
+python_files = ["run_regression_tests.py", "smoke_live_skill.py"]
