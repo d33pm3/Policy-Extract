@@ -1,7 +1,5 @@
 # Policy-extractor
 
-**Author:** DK Mendiratta
-
 ## This is / this is not
 
 **This is** a skill plus deterministic scripts that turn policies and SOPs into an evidence-linked knowledge base.
@@ -122,7 +120,4 @@ Coverage is the candidate disposition ratio plus C3 recall-surface hits.
 Requirement row count is not a quality metric. No historical client pack
 is a gold file. See `references/gold-pack-policy.md`.
 
-## Isolation
-
-This public repository is a new build. It is not a fork, submodule, or
-rename of any private repository. Do not mix trees.
+`policy` `sop` `compliance` `grc` `extraction` `audit` `raci` `python` `ai-skills`
