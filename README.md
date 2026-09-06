@@ -1,5 +1,18 @@
 # Policy-extractor
 
+**Author:** DK Mendiratta
+
+## This is / this is not
+
+**This is** a skill plus deterministic scripts that turn policies and SOPs into an evidence-linked knowledge base.
+**This is** a sourced-vs-proposed schema: document text is kept separate from proposed controls.
+**This is** a G1–G8 validator built to catch silent omission and silent invention.
+**This is not** a legal-research tool, a policy drafter, or a contract redliner.
+**This is not** a one-command finished register — Stage 3 is written by an agent or a human.
+**This is not** approved policy until G8 human review gates are signed.
+**This is not** a substitute for a policy owner, Legal/Compliance, Operations, or Internal Audit.
+**This is not** a live-web SEBI research tool or a filled client pack.
+
 Evidence-linked policy and SOP compliance extraction.
 
 This public repository is a self-contained release of the Policy Extractor
@@ -11,7 +24,9 @@ tests are labelled separately from what the document actually says.
 
 Canonical source: https://github.com/d33pm3/Policy-Extract
 
-Version: **1.2.0** · License: **Apache-2.0**
+Version: **1.2.0** · License: **Apache-2.0** · Author: **DK Mendiratta**
+
+Under Apache-2.0 you may view, copy, modify, and use this code, including commercially, if you keep the license notice and attribution.
 
 ## Why this exists
 
@@ -70,7 +85,9 @@ python3 scripts/intake_register.py --inputs ./policy-pdfs --out-dir "$KB"
 python3 scripts/build_source_layer.py --kb "$KB" --doc-id ALL
 python3 scripts/find_candidates.py --kb "$KB" --doc-id ALL
 python3 scripts/stage3_preflight.py --kb "$KB"
-# Stage 3 writes $KB/02-requirements/requirements.json using the schema
+# Stage 3 is not a script. After PREFLIGHT PASSED, an agent or a human
+# writes $KB/02-requirements/requirements.json using
+# schemas/policy-requirement.schema.json and assets/requirement-record.template.json.
 python3 scripts/cross_document_analysis.py --kb "$KB"
 python3 scripts/validate_pack.py --kb "$KB" --report "$KB/05-quality-assurance/validation-report.md"
 python3 scripts/build_packs.py --kb "$KB"
